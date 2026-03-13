@@ -10,7 +10,21 @@ router.get("/:id", authMiddleware, async (req: Request, res: Response) => {
     const id = req.params.id as string;
     const user = await prisma.user.findUnique({
       where: { id },
-      select: { id: true, email: true, name: true, bio: true, avatarUrl: true, role: true },
+      select: { 
+        id: true, 
+        email: true, 
+        name: true, 
+        bio: true, 
+        avatarUrl: true, 
+        role: true,
+        roles: {
+          select: {
+            id: true,
+            name: true,
+            color: true,
+          }
+        }
+      },
     });
     if (!user) return res.status(404).json({ error: "User not found" });
     return res.json(user);
@@ -25,7 +39,21 @@ router.get("/profile", authMiddleware, async (req: Request, res: Response) => {
     const payload = (req as Request & { user: JwtPayload }).user;
     const user = await prisma.user.findUnique({
       where: { id: payload.sub },
-      select: { id: true, email: true, name: true, bio: true, avatarUrl: true, role: true },
+      select: { 
+        id: true, 
+        email: true, 
+        name: true, 
+        bio: true, 
+        avatarUrl: true, 
+        role: true,
+        roles: {
+          select: {
+            id: true,
+            name: true,
+            color: true,
+          }
+        }
+      },
     });
     if (!user) return res.status(404).json({ error: "User not found" });
     return res.json(user);
@@ -61,14 +89,26 @@ router.put("/profile", authMiddleware, async (req: Request, res: Response) => {
       data,
     });
 
-    return res.json({
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      bio: user.bio,
-      avatarUrl: user.avatarUrl,
-      role: user.role,
+    const updatedUser = await prisma.user.findUnique({
+      where: { id: user.id },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        bio: true,
+        avatarUrl: true,
+        role: true,
+        roles: {
+          select: {
+            id: true,
+            name: true,
+            color: true,
+          }
+        }
+      }
     });
+
+    return res.json(updatedUser);
   } catch (err) {
     console.error("Update profile error:", err);
     return res.status(500).json({

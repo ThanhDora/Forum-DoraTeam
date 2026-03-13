@@ -1,7 +1,7 @@
 import { Router, Request, Response } from "express";
 import { prisma } from "../lib/prisma";
 import { authMiddleware } from "../middleware/jwt";
-import { adminMiddleware } from "../middleware/admin";
+import { adminMiddleware, superadminMiddleware } from "../middleware/admin";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 
@@ -23,6 +23,14 @@ router.get("/users", async (_req: Request, res: Response) => {
         role: true,
         avatarUrl: true,
         bio: true,
+        roleIds: true,
+        roles: {
+          select: {
+            id: true,
+            name: true,
+            color: true,
+          }
+        }
       },
       orderBy: { id: "desc" },
     });
@@ -37,6 +45,7 @@ const createUserSchema = z.object({
   password: z.string().min(6),
   name: z.string().optional(),
   role: z.enum(["user", "admin"]).default("user"),
+  roleIds: z.array(z.string()).optional(),
 });
 
 // Create new user
@@ -46,7 +55,7 @@ router.post("/users", async (req: Request, res: Response) => {
     if (!parsed.success) {
       return res.status(400).json({ error: "Invalid input", details: parsed.error.flatten() });
     }
-    const { email, password, name, role } = parsed.data;
+    const { email, password, name, role, roleIds } = parsed.data;
 
     const existing = await prisma.user.findUnique({ where: { email } });
     if (existing) {
@@ -60,12 +69,14 @@ router.post("/users", async (req: Request, res: Response) => {
         password: hashed,
         name: name ?? null,
         role,
+        roleIds: roleIds ?? [],
       },
       select: {
         id: true,
         email: true,
         name: true,
         role: true,
+        roleIds: true,
         avatarUrl: true,
         bio: true,
       },
@@ -78,25 +89,33 @@ router.post("/users", async (req: Request, res: Response) => {
 });
 
 const updateUserRoleSchema = z.object({
-  role: z.enum(["user", "admin"]),
+  role: z.enum(["user", "admin"]).optional(),
+  roleIds: z.array(z.string()).optional(),
 });
 
 // Update user role
-router.patch("/users/:id/role", async (req: Request, res: Response) => {
+router.patch("/users/:id/role", superadminMiddleware, async (req: Request, res: Response) => {
   try {
     const { id } = req.params as { id: string };
     const parsed = updateUserRoleSchema.safeParse(req.body);
     if (!parsed.success) {
-      return res.status(400).json({ error: "Invalid role", details: parsed.error.flatten() });
+      return res.status(400).json({ error: "Invalid role data", details: parsed.error.flatten() });
     }
     const targetUser = await prisma.user.findUnique({ where: { id } });
-    if (targetUser?.role === "superadmin") {
+    const requester = (req as any).user;
+
+    // Only prevent modification if target is superadmin AND requester is NOT superadmin
+    if (targetUser?.role === "superadmin" && requester.role !== "superadmin") {
       return res.status(403).json({ error: "Cannot modify Super Admin" });
     }
 
+    const updateData: any = {};
+    if (parsed.data.role) updateData.role = parsed.data.role;
+    if (parsed.data.roleIds) updateData.roleIds = parsed.data.roleIds;
+
     const user = await prisma.user.update({
       where: { id: id as string },
-      data: { role: parsed.data.role },
+      data: updateData,
     });
     return res.json(user);
   } catch (err) {

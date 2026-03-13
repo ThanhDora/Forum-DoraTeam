@@ -8,11 +8,93 @@ datasource db {
 }
 
 model User {
-  id       String  @id @default(auto()) @map("_id") @db.ObjectId
-  email    String  @unique
-  password String
-  name     String?
-  bio      String?
+  id        String     @id @default(auto()) @map("_id") @db.ObjectId
+  email     String     @unique
+  password  String
+  name      String?
+  bio       String?
   avatarUrl String?
-  role     String  @default("user")
+  role      String     @default("user") // Legacy field
+  roleIds   String[]   @db.ObjectId
+  roles     Role[]     @relation(fields: [roleIds], references: [id])
+  tutorials Tutorial[]
+  threads   ForumThread[]  @relation("ThreadAuthor")
+  messages  ForumMessage[]
+}
+
+model Role {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  color       String   @default("#99aab5")
+  permissions String   @default("0")
+  position    Int      @default(0)
+  hoist       Boolean  @default(false)
+  mentionable Boolean  @default(false)
+  userIds     String[] @db.ObjectId
+  users       User[]   @relation(fields: [userIds], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Tutorial {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  title     String
+  content   String
+  category  String   @default("C++")
+  active    Boolean  @default(true)
+  isPublic  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  authorId  String   @db.ObjectId
+  author    User     @relation(fields: [authorId], references: [id])
+}
+
+model ForumCategory {
+  id        String         @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  position  Int            @default(0)
+  channels  ForumChannel[]
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+}
+
+model ForumChannel {
+  id          String         @id @default(auto()) @map("_id") @db.ObjectId
+  name        String
+  description String?
+  type        String         @default("text") // "text" (chat) or "forum" (threads)
+  position    Int            @default(0)
+  categoryId  String         @db.ObjectId
+  category    ForumCategory  @relation(fields: [categoryId], references: [id])
+  threads     ForumThread[]
+  messages    ForumMessage[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}
+
+model ForumThread {
+  id        String         @id @default(auto()) @map("_id") @db.ObjectId
+  title     String
+  content   String?        // Initial message content or description
+  authorId  String         @db.ObjectId
+  author    User           @relation(fields: [authorId], references: [id], name: "ThreadAuthor")
+  channelId String         @db.ObjectId
+  channel   ForumChannel   @relation(fields: [channelId], references: [id])
+  messages  ForumMessage[]
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+}
+
+model ForumMessage {
+  id        String        @id @default(auto()) @map("_id") @db.ObjectId
+  content   String
+  authorId  String        @db.ObjectId
+  author    User          @relation(fields: [authorId], references: [id])
+  channelId String?       @db.ObjectId // For direct chat in text channels
+  channel   ForumChannel? @relation(fields: [channelId], references: [id])
+  threadId  String?       @db.ObjectId // For messages within a thread
+  thread    ForumThread?  @relation(fields: [threadId], references: [id])
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
 }

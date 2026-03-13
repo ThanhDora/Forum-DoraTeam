@@ -27,6 +27,17 @@ export const initSocket = (server: HttpServer) => {
       onlineUsers.delete(socket.id);
       broadcastOnlineUsers();
     });
+
+    // Forum Rooms
+    socket.on("join_room", (room: string) => {
+      socket.join(room);
+      console.log(`[Socket] User ${socket.id} joined room: ${room}`);
+    });
+
+    socket.on("leave_room", (room: string) => {
+      socket.leave(room);
+      console.log(`[Socket] User ${socket.id} left room: ${room}`);
+    });
   });
 
   return io;
