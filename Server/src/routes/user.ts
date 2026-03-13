@@ -5,6 +5,21 @@ import { authMiddleware, JwtPayload } from "../middleware/jwt";
 
 const router = Router();
 
+router.get("/:id", authMiddleware, async (req: Request, res: Response) => {
+  try {
+    const id = req.params.id as string;
+    const user = await prisma.user.findUnique({
+      where: { id },
+      select: { id: true, email: true, name: true, bio: true, avatarUrl: true, role: true },
+    });
+    if (!user) return res.status(404).json({ error: "User not found" });
+    return res.json(user);
+  } catch (err) {
+    console.error("Get user profile by ID error:", err);
+    return res.status(500).json({ error: "Failed to load profile" });
+  }
+});
+
 router.get("/profile", authMiddleware, async (req: Request, res: Response) => {
   try {
     const payload = (req as Request & { user: JwtPayload }).user;

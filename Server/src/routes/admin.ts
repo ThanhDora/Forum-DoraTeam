@@ -3,8 +3,11 @@ import { prisma } from "../lib/prisma";
 import { authMiddleware } from "../middleware/jwt";
 import { adminMiddleware } from "../middleware/admin";
 import { z } from "zod";
+import bcrypt from "bcryptjs";
 
 const router = Router();
+
+const SALT_ROUNDS = 10;
 
 // Apply admin protection to all routes in this router
 router.use(authMiddleware, adminMiddleware);
@@ -26,6 +29,51 @@ router.get("/users", async (_req: Request, res: Response) => {
     return res.json(users);
   } catch (err) {
     return res.status(500).json({ error: "Failed to fetch users", details: err instanceof Error ? err.message : "Unknown error" });
+  }
+});
+
+const createUserSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(6),
+  name: z.string().optional(),
+  role: z.enum(["user", "admin"]).default("user"),
+});
+
+// Create new user
+router.post("/users", async (req: Request, res: Response) => {
+  try {
+    const parsed = createUserSchema.safeParse(req.body);
+    if (!parsed.success) {
+      return res.status(400).json({ error: "Invalid input", details: parsed.error.flatten() });
+    }
+    const { email, password, name, role } = parsed.data;
+
+    const existing = await prisma.user.findUnique({ where: { email } });
+    if (existing) {
+      return res.status(409).json({ error: "Email already registered" });
+    }
+
+    const hashed = await bcrypt.hash(password, SALT_ROUNDS);
+    const user = await prisma.user.create({
+      data: {
+        email,
+        password: hashed,
+        name: name ?? null,
+        role,
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        avatarUrl: true,
+        bio: true,
+      },
+    });
+
+    return res.status(201).json(user);
+  } catch (err) {
+    return res.status(500).json({ error: "Failed to create user", details: err instanceof Error ? err.message : "Unknown error" });
   }
 });
 

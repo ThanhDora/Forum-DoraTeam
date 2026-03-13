@@ -29,6 +29,7 @@ app.get("/", async (_req, res) => {
   }
   res.json({
     status: "ok",
+    landingpage: "docx api",
     mongodb: mongoose.connection.readyState === 1 ? "connected" : "disconnected",
     prisma: prismaOk ? "connected" : "disconnected",
   });
