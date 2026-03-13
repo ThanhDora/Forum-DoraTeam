@@ -11,16 +11,16 @@ router.get("/me", authMiddleware, async (req: Request, res: Response) => {
   const user = await prisma.user.findUnique({ where: { id: payload.sub } });
   if (!user) return res.status(404).json({ error: "User not found" });
   
-  const u = user as any;
   return res.json({
-    id: u.id,
-    email: u.email,
-    name: u.name,
-    bio: u.bio,
-    avatarUrl: u.avatarUrl,
-    role: u.role,
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    bio: user.bio,
+    avatarUrl: user.avatarUrl,
+    role: user.role,
   });
 });
+
 const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET ?? process.env.JWT_SECRET ?? "default-secret-change-in-production";
 const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET ?? "default-refresh-secret";
 const SALT_ROUNDS = 10;
@@ -65,7 +65,7 @@ router.post("/login", async (req: Request, res: Response) => {
     if (!valid) {
       return res.status(401).json({ error: "Invalid email or password" });
     }
-    const { accessToken, refreshToken } = generateTokens(user as any);
+    const { accessToken, refreshToken } = generateTokens(user);
     return res.json({
       accessToken,
       refreshToken,
@@ -101,7 +101,7 @@ router.post("/register", async (req: Request, res: Response) => {
     const user = await prisma.user.create({
       data: { email, password: hashed, name: name ?? null },
     });
-    const { accessToken, refreshToken } = generateTokens(user as any);
+    const { accessToken, refreshToken } = generateTokens(user);
     return res.status(201).json({
       accessToken,
       refreshToken,
@@ -129,16 +129,16 @@ router.post("/refresh", async (req: Request, res: Response) => {
   }
 
   try {
-    const decoded = jwt.verify(refreshToken, REFRESH_TOKEN_SECRET) as any;
+    const decoded = jwt.verify(refreshToken, REFRESH_TOKEN_SECRET) as JwtPayload;
     const user = await prisma.user.findUnique({ where: { id: decoded.sub } });
 
     if (!user) {
       return res.status(401).json({ error: "Invalid refresh token" });
     }
 
-    const tokens = generateTokens(user as any);
+    const tokens = generateTokens(user);
     return res.json(tokens);
-  } catch (err) {
+  } catch {
     return res.status(401).json({ error: "Invalid or expired refresh token" });
   }
 });

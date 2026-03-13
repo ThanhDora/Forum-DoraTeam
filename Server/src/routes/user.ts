@@ -46,14 +46,13 @@ router.put("/profile", authMiddleware, async (req: Request, res: Response) => {
       data,
     });
 
-    const u = user as any;
     return res.json({
-      id: u.id,
-      email: u.email,
-      name: u.name,
-      bio: u.bio,
-      avatarUrl: u.avatarUrl,
-      role: u.role,
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      bio: user.bio,
+      avatarUrl: user.avatarUrl,
+      role: user.role,
     });
   } catch (err) {
     console.error("Update profile error:", err);
