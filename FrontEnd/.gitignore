@@ -1,0 +1,65 @@
+# ================================================
+# .gitignore cho Monorepo: Client (iOS) + Server (Node.js)
+# ================================================
+
+# === FILE CHUNG (Root) ===
+.DS_Store
+*.DS_Store
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+Thumbs.db
+
+# === SERVER (Node.js Express) ===
+/Server/node_modules/
+/Server/.pnp
+/Server/.pnp.*
+/Server/.yarn/*
+/Server/coverage/
+/Server/build/
+/Server/dist/
+/Server/logs/
+/Server/.env*
+/Server/npm-debug.log*
+/Server/yarn-debug.log*
+/Server/yarn-error.log*
+
+# === CLIENT (iOS - Xcode Objective-C) ===
+/Client/DerivedData/
+/Client/build/
+/Client/*.build/
+/Client/*.xcworkspace/xcuserdata/
+/Client/*.xcuserstate
+/Client/*.xcodeproj/project.xcworkspace
+/Client/*.xcodeproj/xcuserdata/
+/Client/Pods/
+/Client/Podfile.lock
+/Client/*.ipa
+/Client/*.app
+/Client/*.dSYM
+/Client/.swiftpm/
+/Client/.xcode/
+/Client/.idea/
+/Client/*.swp
+/Client/*.swo
+
+# === MISC (nếu có) ===
+# Nếu bạn dùng CocoaPods
+/Pods/
+
+# Nếu sau này thêm React Native hoặc Next.js thì mới thêm phần này
+# /.next/
+/out/
+
+# Không ignore folder Client và Server (để Git push được hết)
+!Client/
+!Server/
+/node_modules
+.next/
