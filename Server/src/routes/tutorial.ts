@@ -3,6 +3,7 @@ import { prisma } from "../lib/prisma";
 import { authMiddleware } from "../middleware/jwt";
 import { adminMiddleware } from "../middleware/admin";
 import { z } from "zod";
+import { getIO } from "../lib/socket";
 
 const router = Router();
 
@@ -74,10 +75,10 @@ router.get("/public/:id", async (req: Request, res: Response) => {
 });
 
 // Admin routes
-router.use(authMiddleware, adminMiddleware);
+router.use(authMiddleware);
 
-// List all tutorials (Admin)
-router.get("/", async (_req: Request, res: Response) => {
+// List all tutorials (Admin) - Requires at least one tutorial management permission or general admin
+router.get("/", adminMiddleware, async (_req: Request, res: Response) => {
   try {
     const tutorials = await prisma.tutorial.findMany({
       orderBy: { createdAt: "desc" },
@@ -97,8 +98,11 @@ router.get("/", async (_req: Request, res: Response) => {
   }
 });
 
+import { requirePermission } from "../middleware/permission";
+import { Permissions } from "../lib/permissions";
+
 // Create tutorial
-router.post("/", async (req: Request, res: Response) => {
+router.post("/", requirePermission(Permissions.CREATE_TUTORIAL), async (req: Request, res: Response) => {
   try {
     const parsed = createTutorialSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -119,6 +123,8 @@ router.post("/", async (req: Request, res: Response) => {
       },
     });
 
+    getIO().emit("new_tutorial", tutorial);
+
     return res.status(201).json(tutorial);
   } catch (err) {
     return res.status(500).json({ error: "Failed to create tutorial", details: err instanceof Error ? err.message : "Unknown error" });
@@ -126,7 +132,7 @@ router.post("/", async (req: Request, res: Response) => {
 });
 
 // Update tutorial
-router.patch("/:id", async (req: Request, res: Response) => {
+router.patch("/:id", requirePermission(Permissions.EDIT_TUTORIAL), async (req: Request, res: Response) => {
   try {
     const id = req.params.id as string;
     const parsed = updateTutorialSchema.safeParse(req.body);
@@ -144,6 +150,8 @@ router.patch("/:id", async (req: Request, res: Response) => {
       data: updateData as any,
     });
 
+    getIO().emit("update_tutorial", tutorial);
+
     return res.json(tutorial);
   } catch (err) {
     return res.status(500).json({ error: "Failed to update tutorial", details: err instanceof Error ? err.message : "Unknown error" });
@@ -151,10 +159,13 @@ router.patch("/:id", async (req: Request, res: Response) => {
 });
 
 // Delete tutorial
-router.delete("/:id", async (req: Request, res: Response) => {
+router.delete("/:id", requirePermission(Permissions.DELETE_TUTORIAL), async (req: Request, res: Response) => {
   try {
     const id = req.params.id as string;
     await prisma.tutorial.delete({ where: { id } });
+    
+    getIO().emit("delete_tutorial", id);
+    
     return res.json({ success: true });
   } catch (err) {
     return res.status(500).json({ error: "Failed to delete tutorial", details: err instanceof Error ? err.message : "Unknown error" });

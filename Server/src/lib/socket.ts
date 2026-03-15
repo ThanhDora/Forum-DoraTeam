@@ -1,5 +1,6 @@
 import { Server as SocketServer } from "socket.io";
 import { Server as HttpServer } from "http";
+import { prisma } from "./prisma";
 
 let io: SocketServer;
 const onlineUsers = new Map<string, string>(); // socketId -> userId
@@ -22,8 +23,19 @@ export const initSocket = (server: HttpServer) => {
       broadcastOnlineUsers();
     });
 
-    socket.on("disconnect", () => {
+    socket.on("disconnect", async () => {
       console.log(`[Socket] User disconnected: ${socket.id}`);
+      const userId = onlineUsers.get(socket.id);
+      if (userId) {
+        try {
+          await prisma.user.update({
+            where: { id: userId },
+            data: { lastActiveAt: new Date() }
+          });
+        } catch (err) {
+          console.error(`[Socket] Error updating lastActiveAt for ${userId}:`, err);
+        }
+      }
       onlineUsers.delete(socket.id);
       broadcastOnlineUsers();
     });

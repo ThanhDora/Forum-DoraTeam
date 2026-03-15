@@ -15,6 +15,7 @@ export const Permissions = {
   DELETE_TUTORIAL: 1n << 9n,
   VIEW_AUDIT_LOG: 1n << 10n,
   MANAGE_USERS: 1n << 11n,
+  MANAGE_FORUM: 1n << 12n,
 };
 
 /**

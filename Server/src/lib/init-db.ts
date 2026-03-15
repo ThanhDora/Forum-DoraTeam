@@ -18,7 +18,7 @@ export async function bootstrapAdmin() {
       await prisma.user.update({
         where: { email: adminEmail },
         data: {
-          name: adminName,
+          name: adminName.toLowerCase(),
           password: hashedPassword,
           role: "superadmin",
         },
@@ -28,7 +28,7 @@ export async function bootstrapAdmin() {
       await prisma.user.create({
         data: {
           email: adminEmail,
-          name: adminName,
+          name: adminName.toLowerCase(),
           password: hashedPassword,
           role: "superadmin",
         },

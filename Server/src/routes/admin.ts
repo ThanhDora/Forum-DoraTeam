@@ -2,6 +2,8 @@ import { Router, Request, Response } from "express";
 import { prisma } from "../lib/prisma";
 import { authMiddleware } from "../middleware/jwt";
 import { adminMiddleware, superadminMiddleware } from "../middleware/admin";
+import { requirePermission } from "../middleware/permission";
+import { Permissions } from "../lib/permissions";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 
@@ -9,11 +11,11 @@ const router = Router();
 
 const SALT_ROUNDS = 10;
 
-// Apply admin protection to all routes in this router
-router.use(authMiddleware, adminMiddleware);
+// Apply auth protection
+router.use(authMiddleware);
 
 // List all users
-router.get("/users", async (_req: Request, res: Response) => {
+router.get("/users", requirePermission(Permissions.MANAGE_USERS), async (_req: Request, res: Response) => {
   try {
     const users = await prisma.user.findMany({
       select: {
@@ -48,7 +50,7 @@ const createUserSchema = z.object({
 });
 
 // Create new user
-router.post("/users", async (req: Request, res: Response) => {
+router.post("/users", requirePermission(Permissions.MANAGE_USERS), async (req: Request, res: Response) => {
   try {
     const parsed = createUserSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -79,7 +81,7 @@ router.post("/users", async (req: Request, res: Response) => {
         email: true,
         name: true,
         role: true,
-        roleIds: true,
+        roles: true,
         avatarUrl: true,
         bio: true,
       },
@@ -131,7 +133,7 @@ router.patch("/users/:id/role", superadminMiddleware, async (req: Request, res: 
 });
 
 // Delete user
-router.delete("/users/:id", async (req: Request, res: Response) => {
+router.delete("/users/:id", requirePermission(Permissions.MANAGE_USERS), async (req: Request, res: Response) => {
   try {
     const { id } = req.params as { id: string };
     const targetUser = await prisma.user.findUnique({ where: { id } });

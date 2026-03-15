@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import { z } from "zod";
 import { prisma } from "../lib/prisma";
 import { authMiddleware, JwtPayload } from "../middleware/jwt";
+import { getUserPermissions } from "../lib/permissions";
 
 const router = Router();
 router.get("/me", authMiddleware, async (req: Request, res: Response) => {
@@ -26,10 +27,13 @@ router.get("/me", authMiddleware, async (req: Request, res: Response) => {
     id: user.id,
     email: user.email,
     name: user.name,
+    displayName: user.displayName,
     bio: user.bio,
     avatarUrl: user.avatarUrl,
     role: user.role,
     roles: user.roles,
+    lastActiveAt: user.lastActiveAt,
+    permissions: (await getUserPermissions(user.id, prisma)).toString(),
   });
 });
 
@@ -52,14 +56,14 @@ const generateTokens = (user: { id: string; email: string; role: string }) => {
 };
 
 const loginSchema = z.object({
-  email: z.string().email(),
+  email: z.string().min(1), // Represents either email or username
   password: z.string().min(1),
 });
 
 const registerSchema = z.object({
   email: z.string().email(),
   password: z.string().min(6),
-  name: z.string().optional(),
+  name: z.string().regex(/^[a-z0-9_.-]+$/, "Username must be lowercase, without spaces, and can contain alphanumeric characters, underscores, dots, or dashes").optional(),
 });
 
 router.post("/login", async (req: Request, res: Response) => {
@@ -68,9 +72,16 @@ router.post("/login", async (req: Request, res: Response) => {
     if (!parsed.success) {
       return res.status(400).json({ error: "Invalid email or password" });
     }
-    const { email, password } = parsed.data;
-    const user = await prisma.user.findUnique({ 
-      where: { email },
+    const { email: identifier, password } = parsed.data;
+    const identifierLower = identifier.toLowerCase();
+
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { email: identifierLower },
+          { name: identifierLower }
+        ]
+      },
       include: {
         roles: {
           select: {
@@ -96,6 +107,7 @@ router.post("/login", async (req: Request, res: Response) => {
         id: user.id,
         email: user.email,
         name: user.name,
+        displayName: user.displayName,
         bio: user.bio,
         avatarUrl: user.avatarUrl,
         role: user.role,
@@ -122,8 +134,15 @@ router.post("/register", async (req: Request, res: Response) => {
       return res.status(409).json({ error: "Email already registered" });
     }
     const hashed = await bcrypt.hash(password, SALT_ROUNDS);
+    // Ensure name is lowercase
+    const formattedName = name ?? null; // Zod's .toLowerCase() already handles conversion if name is present
+
     const user = await prisma.user.create({
-      data: { email, password: hashed, name: name ?? null },
+      data: {
+        email,
+        password: hashed,
+        name: formattedName,
+      },
       include: {
         roles: {
           select: {
@@ -142,6 +161,7 @@ router.post("/register", async (req: Request, res: Response) => {
         id: user.id,
         email: user.email,
         name: user.name,
+        displayName: user.displayName,
         bio: null,
         avatarUrl: null,
         role: user.role,

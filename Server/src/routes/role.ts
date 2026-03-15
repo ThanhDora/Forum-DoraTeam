@@ -2,13 +2,14 @@ import { Router, Request, Response } from "express";
 import { prisma } from "../lib/prisma";
 import { authMiddleware } from "../middleware/jwt";
 import { adminMiddleware, superadminMiddleware } from "../middleware/admin";
+import { requirePermission } from "../middleware/permission";
 import { z } from "zod";
 import { Permissions } from "../lib/permissions";
 
 const router = Router();
 
-// Apply admin protection
-router.use(authMiddleware, adminMiddleware);
+// Apply auth protection
+router.use(authMiddleware, requirePermission(Permissions.MANAGE_ROLES));
 
 const createRoleSchema = z.object({
   name: z.string().min(1),

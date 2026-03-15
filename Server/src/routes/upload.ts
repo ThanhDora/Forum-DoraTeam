@@ -38,7 +38,7 @@ const upload = multer({
   },
 });
 
-router.post("/", authMiddleware, adminMiddleware, upload.single("file"), (req: Request, res: Response) => {
+router.post("/", authMiddleware, upload.single("file"), (req: Request, res: Response) => {
   try {
     if (!req.file) {
       return res.status(400).json({ error: "No file uploaded" });
