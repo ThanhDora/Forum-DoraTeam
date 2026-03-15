@@ -85,7 +85,11 @@ router.delete("/:id", superadminMiddleware, async (req: Request, res: Response) 
     
     // Check if role is in use
     const userCount = await prisma.user.count({
-      where: { roleIds: { has: id } }
+      where: {
+        roles: {
+          some: { id }
+        }
+      }
     });
 
     if (userCount > 0) {

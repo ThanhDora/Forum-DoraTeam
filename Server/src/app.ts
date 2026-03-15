@@ -1,8 +1,6 @@
 import "dotenv/config";
 import express from "express";
-import mongoose from "mongoose";
 import cors from "cors";
-import connectDB from "./config/db";
 import { prisma } from "./lib/prisma";
 import authRoutes from "./routes/auth";
 import userRoutes from "./routes/user";
@@ -46,7 +44,6 @@ app.get("/", async (_req, res) => {
   res.json({
     status: "ok",
     landingpage: "docx api",
-    mongodb: mongoose.connection.readyState === 1 ? "connected" : "disconnected",
     prisma: prismaOk ? "connected" : "disconnected",
   });
 });
@@ -59,16 +56,9 @@ import { initSocket } from "./lib/socket";
 const httpServer = createServer(app);
 initSocket(httpServer);
 
-connectDB()
-  .then(async () => {
-    await bootstrapAdmin();
-    httpServer.listen(PORT, () => {
-      console.log(`Server running on http://localhost:${PORT}`);
-    });
-  })
-  .catch((err) => {
-    console.error(err);
-    process.exit(1);
-  });
+httpServer.listen(PORT, async () => {
+  await bootstrapAdmin();
+  console.log(`Server running on http://localhost:${PORT}`);
+});
 
 export default app;

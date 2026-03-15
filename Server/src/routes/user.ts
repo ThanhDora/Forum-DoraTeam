@@ -5,7 +5,7 @@ import { authMiddleware, JwtPayload } from "../middleware/jwt";
 
 const router = Router();
 
-router.get("/:id", authMiddleware, async (req: Request, res: Response) => {
+router.get("/:id", async (req: Request, res: Response) => {
   try {
     const id = req.params.id as string;
     const user = await prisma.user.findUnique({

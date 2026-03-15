@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "nodemon src/app.ts",
+    "dev": "nodemon -e ts,json --exec tsx src/app.ts",
     "build": "npm run lint && prisma generate && tsc",
     "start": "node dist/app.js",
     "lint": "eslint \"src/**/*.ts\"",
@@ -27,7 +27,6 @@
     "express-ejs-layouts": "^2.5.1",
     "helmet": "^8.1.0",
     "jsonwebtoken": "^9.0.2",
-    "mongoose": "^8.23.0",
     "morgan": "^1.10.1",
     "multer": "^2.0.2",
     "mysql2": "^3.19.0",
@@ -51,6 +50,7 @@
     "prettier-plugin-prisma": "^5.0.0",
     "prisma": "6.19",
     "ts-node": "^10.9.2",
+    "tsx": "^4.21.0",
     "typescript": "^5.9.3",
     "typescript-eslint": "^8.54.0"
   }

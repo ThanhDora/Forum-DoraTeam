@@ -23,7 +23,6 @@ router.get("/users", async (_req: Request, res: Response) => {
         role: true,
         avatarUrl: true,
         bio: true,
-        roleIds: true,
         roles: {
           select: {
             id: true,
@@ -69,7 +68,11 @@ router.post("/users", async (req: Request, res: Response) => {
         password: hashed,
         name: name ?? null,
         role,
-        roleIds: roleIds ?? [],
+        ...(roleIds ? {
+          roles: {
+            connect: roleIds.map(id => ({ id }))
+          }
+        } : {}),
       },
       select: {
         id: true,
@@ -111,7 +114,11 @@ router.patch("/users/:id/role", superadminMiddleware, async (req: Request, res: 
 
     const updateData: any = {};
     if (parsed.data.role) updateData.role = parsed.data.role;
-    if (parsed.data.roleIds) updateData.roleIds = parsed.data.roleIds;
+    if (parsed.data.roleIds) {
+      updateData.roles = {
+        set: parsed.data.roleIds.map(id => ({ id }))
+      };
+    }
 
     const user = await prisma.user.update({
       where: { id: id as string },
